@@ -1,0 +1,40 @@
+version: "3.9"
+
+# Development overrides
+# Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app
+      - upload_data:/app/uploads
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./worker:/app
+      - upload_data:/app/uploads
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    command: celery -A celery_app worker --loglevel=debug --concurrency=2
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
