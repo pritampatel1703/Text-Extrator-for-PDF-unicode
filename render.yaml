@@ -1,10 +1,10 @@
-services:
+databases:
   # ── PostgreSQL Database ──
-  - type: psql
-    name: pdf-postgres
+  - name: pdf-postgres
     plan: starter # Starter plan recommended for pgvector & resources
     ipAllowList: [] # Allows access from Render services
 
+services:
   # ── Redis Instance ──
   - type: redis
     name: pdf-redis
