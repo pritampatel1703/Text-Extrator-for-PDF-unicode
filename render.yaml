@@ -85,17 +85,7 @@ services:
     plan: starter
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        # This dynamically gets the URL of the backend web service deployed above
         fromService:
           type: web
           name: pdf-backend
-          property: url
-        # Render URLs don't have trailing slashes, so we append the api/v1 path dynamically. 
-        # But wait, Render doesn't support concatenating in render.yaml for fromService URL.
-        # We might need to pass the base URL and let the frontend handle it, or we just pass the root URL and the frontend appends /api/v1
-        # Actually, in Next.js we can set NEXT_PUBLIC_API_URL in the dashboard later if this doesn't perfectly work, or we can use string interpolation if Render supports it (it doesn't).
-        # Let's set the base URL to a separate var and use it in the frontend if needed, or just let Next.js use the root.
-        # For simplicity, we just use the url property, which is like https://pdf-backend-xyz.onrender.com
-        # Then inside the frontend code, we need to ensure it uses `${NEXT_PUBLIC_API_URL}/api/v1`.
-        # I'll update the render.yaml to just export NEXT_PUBLIC_API_BASE_URL instead of NEXT_PUBLIC_API_URL.
-        # Let me just set NEXT_PUBLIC_API_URL to the service URL and we will need to ensure frontend handles it properly.
+          property: host

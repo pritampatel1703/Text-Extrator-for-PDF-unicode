@@ -3,6 +3,12 @@
  */
 
 let apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+// If Render passes just the host (e.g. "pdf-backend-xyz.onrender.com"), prepend https://
+if (apiBaseUrl && !apiBaseUrl.startsWith('http')) {
+  apiBaseUrl = `https://${apiBaseUrl}`;
+}
+
 if (apiBaseUrl && !apiBaseUrl.endsWith('/api/v1')) {
   // Remove trailing slash if it exists before appending
   apiBaseUrl = apiBaseUrl.replace(/\/$/, '') + '/api/v1';
