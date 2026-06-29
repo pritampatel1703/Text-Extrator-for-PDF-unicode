@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "PDF Search Platform — Enterprise Document Intelligence",
@@ -18,32 +19,35 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="bg-mesh">
-        <div style={{ display: "flex", minHeight: "100vh" }}>
-          <Sidebar />
-          <div
-            style={{
-              flex: 1,
-              marginLeft: "var(--sidebar-width)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Header />
-            <main
+        <AuthProvider>
+          <div style={{ display: "flex", minHeight: "100vh" }}>
+            <Sidebar />
+            <div
               style={{
                 flex: 1,
-                padding: "24px 32px",
-                marginTop: "var(--header-height)",
-                maxWidth: "1400px",
-                width: "100%",
-                marginInline: "auto",
+                marginLeft: "var(--sidebar-width)",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              {children}
-            </main>
+              <Header />
+              <main
+                style={{
+                  flex: 1,
+                  padding: "24px 32px",
+                  marginTop: "var(--header-height)",
+                  maxWidth: "1400px",
+                  width: "100%",
+                  marginInline: "auto",
+                }}
+              >
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

@@ -19,8 +19,20 @@ export default function DocumentsPage() {
     loadDocuments();
   }, [page, statusFilter]);
 
-  async function loadDocuments() {
-    setLoading(true);
+  useEffect(() => {
+    const hasProcessing = documents.some(
+      (doc) => doc.processing_status === "processing" || doc.processing_status === "pending"
+    );
+    if (hasProcessing) {
+      const interval = setInterval(() => {
+        loadDocuments(true);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [documents, page, statusFilter, searchFilter]);
+
+  async function loadDocuments(background = false) {
+    if (!background) setLoading(true);
     try {
       const data = await api.getDocuments({
         page,
@@ -34,7 +46,7 @@ export default function DocumentsPage() {
     } catch (e) {
       console.error("Failed to load documents:", e);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }
 

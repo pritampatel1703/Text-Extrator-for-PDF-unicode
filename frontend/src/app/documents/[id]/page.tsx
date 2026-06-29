@@ -21,6 +21,7 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
   const [searchMatches, setSearchMatches] = useState<Array<{ page: number; text: string }>>([]);
   const [sidebarTab, setSidebarTab] = useState<"info" | "text" | "search">("info");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const renderTaskRef = useRef<any>(null);
 
   // Load document
   useEffect(() => {
@@ -58,19 +59,25 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
   // Render PDF page on canvas using pdf.js
   useEffect(() => {
     if (!document || !canvasRef.current) return;
+    let isMounted = true;
 
     async function renderPage() {
       try {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
-        // Get document file URL
+        // Get document file URL — derive backend base from API URL
         const fileData = await api.getDocumentFile(id);
-        const pdfUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "")}${fileData.file_path}`;
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+        const backendBase = apiBase.replace(/\/api\/v1\/?$/, "");
+        const pdfUrl = `${backendBase}${fileData.file_path}`;
 
         const loadingTask = pdfjs.getDocument({ url: pdfUrl });
         const pdf = await loadingTask.promise;
+        if (!isMounted) return;
+
         const page = await pdf.getPage(currentPage);
+        if (!isMounted) return;
 
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -82,17 +89,37 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        await page.render({
+        if (renderTaskRef.current) {
+          try {
+            renderTaskRef.current.cancel();
+          } catch (e) {}
+        }
+
+        const renderContext = {
           canvasContext: context,
           viewport: viewport,
           canvas: canvas,
-        } as any).promise;
-      } catch (e) {
-        console.error("PDF render error:", e);
+        };
+        const renderTask = page.render(renderContext as any);
+        renderTaskRef.current = renderTask;
+        
+        await renderTask.promise;
+      } catch (e: any) {
+        if (e.name !== "RenderingCancelledException") {
+          console.error("PDF render error:", e);
+        }
       }
     }
 
     renderPage();
+    return () => {
+      isMounted = false;
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (e) {}
+      }
+    };
   }, [document, currentPage, zoom, id]);
 
   // Search within document pages

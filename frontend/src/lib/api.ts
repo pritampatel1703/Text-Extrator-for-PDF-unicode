@@ -68,7 +68,8 @@ class ApiClient {
       throw new ApiError(response.status, error.detail || 'Request failed');
     }
 
-    return response.json();
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   }
 
   // ── Upload ──

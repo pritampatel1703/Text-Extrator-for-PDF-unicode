@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 const navItems = [
   {
@@ -63,6 +64,12 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  // Hide sidebar on auth pages
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
 
   return (
     <aside
@@ -184,35 +191,118 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* Bottom section */}
+      {/* Bottom section — Auth */}
       <div
         style={{
           padding: "16px 24px",
           borderTop: "1px solid var(--border-color)",
         }}
       >
-        <div
-          className="glass-card"
-          style={{
-            padding: "12px 16px",
-            borderRadius: "var(--radius-md)",
-          }}
-        >
-          <p
+        {isAuthenticated && user ? (
+          <div
             style={{
-              fontSize: "11px",
-              color: "var(--text-muted)",
-              marginBottom: "4px",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
             }}
           >
-            Platform v1.0
-          </p>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-            Enterprise Edition
-          </p>
-        </div>
+            {/* User avatar */}
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: "var(--accent-gradient)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "14px",
+                fontWeight: "700",
+                color: "white",
+                flexShrink: 0,
+              }}
+            >
+              {(user.full_name || user.username || "U").charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "var(--text-primary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {user.full_name || user.username}
+              </p>
+              <p
+                style={{
+                  fontSize: "11px",
+                  color: "var(--text-muted)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {user.role}
+              </p>
+            </div>
+            <button
+              onClick={logout}
+              title="Sign out"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border-color)",
+                borderRadius: "8px",
+                padding: "6px",
+                cursor: "pointer",
+                color: "var(--text-muted)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--error)";
+                e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.borderColor = "var(--border-color)";
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="btn-primary"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              width: "100%",
+              textDecoration: "none",
+              padding: "10px",
+              fontSize: "13px",
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            Sign In
+          </Link>
+        )}
       </div>
     </aside>
   );

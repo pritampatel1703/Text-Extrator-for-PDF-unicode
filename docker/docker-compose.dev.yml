@@ -1,4 +1,4 @@
-version: "3.9"
+# Development overrides
 
 # Development overrides
 # Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
@@ -6,10 +6,10 @@ version: "3.9"
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
+      context: ../backend
+      dockerfile: Dockerfile
     volumes:
-      - ./backend:/app
+      - ../backend:/app
       - upload_data:/app/uploads
     environment:
       - DEBUG=true
@@ -18,10 +18,10 @@ services:
 
   worker:
     build:
-      context: ./worker
-      dockerfile: Dockerfile.dev
+      context: ../worker
+      dockerfile: Dockerfile
     volumes:
-      - ./worker:/app
+      - ../worker:/app
       - upload_data:/app/uploads
     environment:
       - DEBUG=true
@@ -30,11 +30,11 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
+      context: ../frontend
+      dockerfile: Dockerfile
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      - ../frontend/src:/app/src
+      - ../frontend/public:/app/public
     environment:
       - NODE_ENV=development
     command: npm run dev

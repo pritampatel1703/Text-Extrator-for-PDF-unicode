@@ -1,0 +1,28 @@
+# Backend Dependencies — Local Mode (no Docker required)
+# Using latest versions for Python 3.14 compatibility
+# Core
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pydantic>=2.11
+pydantic-settings>=2.8
+
+# Database (SQLite via aiosqlite)
+sqlalchemy[asyncio]
+aiosqlite
+
+# Authentication
+pyjwt[crypto]
+passlib[bcrypt]
+bcrypt
+
+# File handling
+aiofiles
+
+# Utilities
+httpx
+loguru
+
+# PDF text extraction
+pymupdf
