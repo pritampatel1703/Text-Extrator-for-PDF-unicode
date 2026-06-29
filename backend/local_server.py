@@ -31,9 +31,9 @@ from pydantic import BaseModel
 import sqlite3
 
 # ── Configuration ──
-UPLOAD_DIR = Path(__file__).parent / "uploads"
-DB_PATH = Path(__file__).parent / "pdf_platform.db"
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", Path(__file__).parent / "uploads"))
+DB_PATH = Path(os.getenv("DB_PATH", Path(__file__).parent / "pdf_platform.db"))
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Database Setup ──
 def get_db():
