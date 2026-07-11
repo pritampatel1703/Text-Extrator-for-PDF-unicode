@@ -419,13 +419,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# CORS — allow frontend origins
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://pdf-ocr-g53d.onrender.com,http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=86400,
 )
 
 # (Uploads are served via S3 directly)
