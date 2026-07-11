@@ -26,7 +26,7 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import DictCursor
@@ -689,13 +689,38 @@ async def get_document_file(document_id: str):
     if not doc:
         raise HTTPException(404, "Document not found")
 
-    public_url = f"{S3_ENDPOINT.replace('/s3', '')}/object/public/{S3_BUCKET}/{doc['filename']}"
+    backend_url = f"/api/v1/documents/{document_id}/download"
 
     return {
         "document_id": document_id,
         "filename": doc["original_filename"],
-        "file_path": public_url,
+        "file_path": backend_url,
     }
+
+
+@app.get("/api/v1/documents/{document_id}/download")
+async def download_document(document_id: str):
+    conn = get_db()
+    doc = conn.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+    conn.close()
+
+    if not doc:
+        raise HTTPException(404, "Document not found")
+
+    try:
+        # Stream the PDF directly from S3 via the backend to bypass any CORS/403 issues on Supabase
+        file_obj = io.BytesIO()
+        s3_client.download_fileobj(S3_BUCKET, doc["filename"], file_obj)
+        file_obj.seek(0)
+        
+        return StreamingResponse(
+            file_obj,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{doc["original_filename"]}"'}
+        )
+    except Exception as e:
+        print(f"[ERROR] Failed to download from S3: {e}")
+        raise HTTPException(500, "Failed to fetch document from storage")
 
 
 @app.delete("/api/v1/documents/{document_id}")
