@@ -689,12 +689,22 @@ async def get_document_file(document_id: str):
     if not doc:
         raise HTTPException(404, "Document not found")
 
-    public_url = f"{S3_ENDPOINT.replace('/s3', '')}/object/public/{S3_BUCKET}/{doc['filename']}"
+    # Generate a presigned URL (works even if bucket is private)
+    try:
+        presigned_url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": S3_BUCKET, "Key": doc["filename"]},
+            ExpiresIn=3600,  # 1 hour
+        )
+    except Exception as e:
+        print(f"[ERROR] Failed to generate presigned URL: {e}")
+        # Fallback to public URL
+        presigned_url = f"{S3_ENDPOINT.replace('/s3', '')}/object/public/{S3_BUCKET}/{doc['filename']}"
 
     return {
         "document_id": document_id,
         "filename": doc["original_filename"],
-        "file_path": public_url,
+        "file_path": presigned_url,
     }
 
 
