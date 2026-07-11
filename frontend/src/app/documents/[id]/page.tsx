@@ -30,10 +30,31 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
     loadDocument();
   }, [id]);
 
-  // Load page detail when page changes
+  // Auto-refresh document while processing
   useEffect(() => {
-    if (document) {
+    if (document && (document.processing_status === "processing" || document.processing_status === "pending")) {
+      const interval = setInterval(async () => {
+        try {
+          const doc = await api.getDocument(id);
+          setDocument(doc);
+        } catch (e) {}
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [document?.processing_status, id]);
+
+  // Load page detail when page changes — only if processing is done or page exists
+  useEffect(() => {
+    if (document && document.processing_status === "completed") {
       loadPageDetail(currentPage);
+    } else if (document && document.pages && document.pages.length > 0) {
+      // Even while processing, try to load already-processed pages
+      const pageExists = document.pages.some(p => p.page_number === currentPage);
+      if (pageExists) {
+        loadPageDetail(currentPage);
+      } else {
+        setPageDetail(null);
+      }
     }
   }, [currentPage, document]);
 
@@ -53,8 +74,12 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
     try {
       const page = await api.getPage(id, pageNum);
       setPageDetail(page);
-    } catch (e) {
-      console.error("Failed to load page:", e);
+    } catch (e: any) {
+      // Silently handle 404 (page not processed yet)
+      if (e?.status !== 404) {
+        console.error("Failed to load page:", e);
+      }
+      setPageDetail(null);
     }
   }
 
