@@ -402,18 +402,18 @@ class LoginRequest(BaseModel):
 # ── App Setup ──
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("[*] Starting PDF Search Platform (Local Mode)...")
+    print("[*] Starting PDF Search Platform (Cloud Mode)...")
     init_database()
-    print("[OK] SQLite database initialized")
-    print("[OK] Ready! Open http://localhost:3000 in your browser")
+    print("[OK] PostgreSQL database initialized")
+    print("[OK] Ready!")
     yield
     print("[*] Shutting down...")
 
 
 app = FastAPI(
     title="PDF Search Platform",
-    description="Local standalone mode — SQLite + PyMuPDF",
-    version="1.0.0-local",
+    description="Cloud mode — PostgreSQL + Supabase S3 + PyMuPDF",
+    version="1.0.0-cloud",
     docs_url="/api/v1/docs",
     redoc_url="/api/v1/redoc",
     lifespan=lifespan,
@@ -432,16 +432,17 @@ app.add_middleware(
 
 
 # ── Health Check ──
+@app.get("/")
 @app.get("/health")
 @app.get("/api/v1/health")
 async def health_check():
     return {
         "status": "healthy",
         "service": "PDF Search Platform",
-        "version": "1.0.0-local",
-        "environment": "local",
-        "elasticsearch": "disabled (local mode)",
-        "database": "sqlite",
+        "version": "1.0.0-cloud",
+        "environment": "cloud",
+        "database": "postgresql",
+        "storage": "supabase-s3",
     }
 
 
