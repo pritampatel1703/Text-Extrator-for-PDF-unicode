@@ -435,9 +435,9 @@ app.add_middleware(
 
 
 # ── Health Check ──
-@app.get("/")
-@app.get("/health")
-@app.get("/api/v1/health")
+@app.api_route("/", methods=["GET", "HEAD"])
+@app.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/api/v1/health", methods=["GET", "HEAD"])
 async def health_check():
     return {
         "status": "healthy",
@@ -456,7 +456,8 @@ async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(
         raise HTTPException(400, "Only PDF files are allowed.")
 
     doc_id = str(uuid.uuid4())
-    safe_filename = f"{doc_id}_{file.filename}"
+    # Use ASCII-only S3 key (UUID + extension) to avoid Unicode issues
+    safe_filename = f"{doc_id}.pdf"
 
     # Save file to S3
     content = await file.read()
