@@ -20,8 +20,8 @@ ENV HOME=/home/user \
 WORKDIR $HOME/app
 
 # Install Python dependencies
-COPY --chown=user backend/requirements-local.txt .
-RUN pip install --no-cache-dir -r requirements-local.txt
+COPY --chown=user backend/requirements-cloud.txt .
+RUN pip install --no-cache-dir -r requirements-cloud.txt
 
 # Copy backend code
 COPY --chown=user backend/ .
@@ -34,4 +34,4 @@ ENV DB_PATH=/data/pdf_platform.db
 # Expose the default Hugging Face port
 EXPOSE 7860
 
-CMD ["uvicorn", "local_server:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "cloud_server:app", "--host", "0.0.0.0", "--port", "7860"]

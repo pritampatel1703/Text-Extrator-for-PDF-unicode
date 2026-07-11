@@ -1,0 +1,24 @@
+# Backend Dependencies — Cloud Mode (Neon Postgres + Supabase S3)
+
+# Core
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pydantic>=2.11
+
+# Cloud Storage and Database
+psycopg2-binary
+boto3
+
+# Authentication
+pyjwt[crypto]
+passlib[bcrypt]
+bcrypt
+
+# PDF text extraction
+pymupdf
+
+# OCR Support
+pytesseract
+Pillow
