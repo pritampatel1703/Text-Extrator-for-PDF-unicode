@@ -70,7 +70,8 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
         const fileData = await api.getDocumentFile(id);
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
         const backendBase = apiBase.replace(/\/api\/v1\/?$/, "");
-        const pdfUrl = `${backendBase}${fileData.file_path}`;
+        // If file_path is a full URL (cloud S3), use it directly; otherwise prepend backend base
+        const pdfUrl = fileData.file_path.startsWith("http") ? fileData.file_path : `${backendBase}${fileData.file_path}`;
 
         const loadingTask = pdfjs.getDocument({ url: pdfUrl });
         const pdf = await loadingTask.promise;
