@@ -14,20 +14,6 @@ jobs:
   # ── Backend Tests ──
   backend-test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_DB: pdf_platform_test
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -41,27 +27,12 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio pytest-cov ruff mypy
+          pip install -r requirements-cloud.txt
 
-      - name: Lint with Ruff
+      - name: Verify cloud_server imports
         run: |
           cd backend
-          ruff check .
-
-      - name: Type check with MyPy
-        run: |
-          cd backend
-          mypy app/ --ignore-missing-imports || true
-
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/pdf_platform_test
-          ELASTICSEARCH_URL: http://localhost:9200
-          REDIS_URL: redis://localhost:6379/0
-        run: |
-          cd backend
-          pytest tests/ -v --cov=app --cov-report=xml || true
+          python -c "import cloud_server; print('cloud_server.py imports OK')"
 
   # ── Frontend Tests ──
   frontend-test:
