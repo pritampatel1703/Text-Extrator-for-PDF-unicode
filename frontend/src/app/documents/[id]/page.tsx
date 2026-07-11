@@ -22,6 +22,8 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
   const [sidebarTab, setSidebarTab] = useState<"info" | "text" | "search">("info");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderTaskRef = useRef<any>(null);
+  const pdfDocRef = useRef<any>(null);
+  const pdfUrlRef = useRef<string | null>(null);
 
   // Load document
   useEffect(() => {
@@ -56,26 +58,46 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  // Render PDF page on canvas using pdf.js
+  // Load PDF document once, then re-use for page changes
   useEffect(() => {
-    if (!document || !canvasRef.current) return;
+    if (!document) return;
     let isMounted = true;
 
-    async function renderPage() {
+    async function loadPdf() {
       try {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
-        // Get document file URL — derive backend base from API URL
         const fileData = await api.getDocumentFile(id);
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
         const backendBase = apiBase.replace(/\/api\/v1\/?$/, "");
-        // If file_path is a full URL (cloud S3), use it directly; otherwise prepend backend base
         const pdfUrl = fileData.file_path.startsWith("http") ? fileData.file_path : `${backendBase}${fileData.file_path}`;
+
+        if (pdfUrlRef.current === pdfUrl && pdfDocRef.current) return;
+        pdfUrlRef.current = pdfUrl;
 
         const loadingTask = pdfjs.getDocument({ url: pdfUrl });
         const pdf = await loadingTask.promise;
         if (!isMounted) return;
+        pdfDocRef.current = pdf;
+      } catch (e) {
+        console.error("Failed to load PDF document:", e);
+      }
+    }
+
+    loadPdf();
+    return () => { isMounted = false; };
+  }, [document, id]);
+
+  // Render the current page from cached PDF
+  useEffect(() => {
+    if (!pdfDocRef.current || !canvasRef.current) return;
+    let isMounted = true;
+
+    async function renderPage() {
+      try {
+        const pdf = pdfDocRef.current;
+        if (!pdf) return;
 
         const page = await pdf.getPage(currentPage);
         if (!isMounted) return;
@@ -103,7 +125,7 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
         };
         const renderTask = page.render(renderContext as any);
         renderTaskRef.current = renderTask;
-        
+
         await renderTask.promise;
       } catch (e: any) {
         if (e.name !== "RenderingCancelledException") {
@@ -121,7 +143,7 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
         } catch (e) {}
       }
     };
-  }, [document, currentPage, zoom, id]);
+  }, [currentPage, zoom, document]);
 
   // Search within document pages
   const searchInDocument = useCallback(() => {
@@ -190,6 +212,36 @@ export default function DocumentViewerPage({ params }: { params: Promise<{ id: s
           </p>
         </div>
       </div>
+
+      {/* Processing Progress Banner */}
+      {(document.processing_status === "processing" || document.processing_status === "pending") && (
+        <div style={{
+          padding: "12px 20px",
+          marginBottom: "16px",
+          borderRadius: "var(--radius-md)",
+          background: "rgba(234, 179, 8, 0.08)",
+          border: "1px solid rgba(234, 179, 8, 0.25)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+        }}>
+          <span style={{ animation: "spin 1s linear infinite", fontSize: "18px" }}>⏳</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-primary)", margin: 0 }}>
+              Processing page {Math.max(1, Math.round((document.processing_progress - 10) / 90 * document.page_count))} of {document.page_count}...
+            </p>
+            <div style={{ marginTop: "6px", width: "100%", height: "4px", borderRadius: "2px", background: "var(--bg-tertiary)", overflow: "hidden" }}>
+              <div style={{
+                width: `${document.processing_progress || 0}%`,
+                height: "100%",
+                borderRadius: "2px",
+                background: "linear-gradient(90deg, #eab308, #f59e0b)",
+                transition: "width 0.5s ease",
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Viewer Layout */}
       <div style={{ display: "flex", gap: "20px", height: "calc(100vh - 200px)" }}>

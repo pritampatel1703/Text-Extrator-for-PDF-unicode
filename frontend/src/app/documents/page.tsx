@@ -198,6 +198,7 @@ export default function DocumentsPage() {
                 >
                   <span style={{ fontSize: "12px", fontWeight: "800", color: "#ef4444" }}>PDF</span>
                 </div>
+              <div>
                 <span
                   className={`badge ${
                     doc.processing_status === "completed" ? "badge-success"
@@ -206,8 +207,22 @@ export default function DocumentsPage() {
                     : "badge-info"
                   }`}
                 >
-                  {doc.processing_status}
+                  {doc.processing_status === "processing"
+                    ? `Processing ${Math.round((doc.processing_progress - 10) / 90 * doc.page_count)}/${doc.page_count} pages`
+                    : doc.processing_status}
                 </span>
+                {(doc.processing_status === "processing" || doc.processing_status === "pending") && (
+                  <div style={{ marginTop: "6px", width: "100%", height: "4px", borderRadius: "2px", background: "var(--bg-tertiary)", overflow: "hidden" }}>
+                    <div style={{
+                      width: `${doc.processing_progress || 0}%`,
+                      height: "100%",
+                      borderRadius: "2px",
+                      background: "linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))",
+                      transition: "width 0.5s ease",
+                    }} />
+                  </div>
+                )}
+              </div>
               </div>
 
               <Link
