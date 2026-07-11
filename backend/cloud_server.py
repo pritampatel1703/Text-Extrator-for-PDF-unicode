@@ -26,7 +26,7 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import DictCursor
@@ -713,10 +713,10 @@ async def download_document(document_id: str):
         s3_client.download_fileobj(S3_BUCKET, doc["filename"], file_obj)
         file_obj.seek(0)
         
-        return StreamingResponse(
-            file_obj,
+        return Response(
+            content=file_obj.getvalue(),
             media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="{doc["original_filename"]}"'}
+            headers={"Content-Disposition": "inline; filename=\"document.pdf\""}
         )
     except Exception as e:
         print(f"[ERROR] Failed to download from S3: {e}")
