@@ -212,8 +212,9 @@ def ocr_page(page, lang_list=None):
         return ""
     
     try:
-        pix = page.get_pixmap(dpi=300)
+        pix = page.get_pixmap(dpi=150)  # Lower DPI for memory-constrained environments
         img_data = pix.tobytes("png")
+        del pix  # Free pixmap memory immediately
         img = Image.open(io.BytesIO(img_data))
         
         if OCR_ENGINE == "tesseract":
@@ -234,10 +235,13 @@ import fitz  # PyMuPDF
 def process_pdf(filename: str, document_id: str):
     """Extract text from PDF using PyMuPDF, with OCR fallback for garbled text."""
 
+    print(f"[PROCESS] Starting processing for {document_id} ({filename})")
     conn = get_db()
     temp_path = f"/tmp/{filename}"
     try:
+        print(f"[PROCESS] Downloading from S3...")
         s3_client.download_file(S3_BUCKET, filename, temp_path)
+        print(f"[PROCESS] Downloaded. Opening PDF...")
         doc = fitz.open(temp_path)
 
         # Update document metadata
@@ -270,7 +274,9 @@ def process_pdf(filename: str, document_id: str):
         first_page_text = doc[0].get_text("text") if total_pages > 0 else ""
         use_ocr = OCR_ENGINE is not None and (not first_page_text.strip() or is_text_garbled(first_page_text))
         if use_ocr:
-            print(f"[INFO] No text or garbled text detected - using OCR for document {document_id}")
+            print(f"[PROCESS] OCR mode: No text or garbled text detected for {document_id}")
+        else:
+            print(f"[PROCESS] Text mode: Good text layer found for {document_id}")
 
         for page_num in range(total_pages):
             page = doc[page_num]
@@ -355,6 +361,7 @@ def process_pdf(filename: str, document_id: str):
                 (progress, document_id),
             )
             conn.commit()
+            print(f"[PROCESS] Page {page_num + 1}/{total_pages} done for {document_id}")
 
         # Mark as completed
         conn.execute("""
@@ -368,15 +375,18 @@ def process_pdf(filename: str, document_id: str):
         doc.close()
 
     except Exception as e:
-        conn.execute("""
-            UPDATE documents SET
-                processing_status = 'failed',
-                processing_error = ?,
-                updated_at = ?
-            WHERE id = ?
-        """, (str(e), datetime.now(timezone.utc).isoformat(), document_id))
-        conn.commit()
-        raise
+        print(f"[ERROR] Processing failed for {document_id}: {e}")
+        try:
+            conn.execute("""
+                UPDATE documents SET
+                    processing_status = 'failed',
+                    processing_error = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """, (str(e), datetime.now(timezone.utc).isoformat(), document_id))
+            conn.commit()
+        except Exception as db_err:
+            print(f"[ERROR] Failed to update error status: {db_err}")
     finally:
         try:
             doc.close()
@@ -405,6 +415,38 @@ async def lifespan(app: FastAPI):
     print("[*] Starting PDF Search Platform (Cloud Mode)...")
     init_database()
     print("[OK] PostgreSQL database initialized")
+
+    # Recover stuck documents (interrupted by previous server restart)
+    try:
+        conn = get_db()
+        stuck = conn.execute(
+            "SELECT id, filename FROM documents WHERE processing_status IN ('processing', 'pending')"
+        ).fetchall()
+        if stuck:
+            print(f"[RECOVERY] Found {len(stuck)} stuck document(s), re-queuing...")
+            for doc in stuck:
+                conn.execute(
+                    "UPDATE documents SET processing_status = 'pending', processing_progress = 0 WHERE id = ?",
+                    (doc["id"],)
+                )
+                # Delete any partially processed pages
+                conn.execute("DELETE FROM text_blocks WHERE page_id IN (SELECT id FROM pages WHERE document_id = ?)", (doc["id"],))
+                conn.execute("DELETE FROM pages WHERE document_id = ?", (doc["id"],))
+            conn.commit()
+            conn.close()
+
+            # Re-process in background threads
+            import threading
+            for doc in stuck:
+                print(f"[RECOVERY] Re-processing: {doc['id']} ({doc['filename']})")
+                t = threading.Thread(target=process_pdf, args=(doc["filename"], doc["id"]))
+                t.daemon = True
+                t.start()
+        else:
+            conn.close()
+    except Exception as e:
+        print(f"[WARN] Recovery check failed: {e}")
+
     print("[OK] Ready!")
     yield
     print("[*] Shutting down...")
