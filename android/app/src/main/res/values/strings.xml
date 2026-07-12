@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">PDF OCR Platform</string>
+    <string name="webview_url">https://pdf-ocr-g53d.onrender.com</string>
+</resources>
